@@ -44,33 +44,54 @@ struct Task {
 
     // The date the task was created
     // This property is set as the current date whenever the task is initially created.
-    let createdDate: Date = Date()
+    var createdDate: Date = Date()
 
     // An id (Universal Unique Identifier) used to identify a task.
-    let id: String = UUID().uuidString
+    var id: String = UUID().uuidString
 }
 
-// MARK: - Task + UserDefaults
-extension Task {
 
+// MARK: - Task + UserDefaults
+
+extension Task: Codable {
+    private static let tasksKey = "tasks"
 
     // Given an array of tasks, encodes them to data and saves to UserDefaults.
     static func save(_ tasks: [Task]) {
-
-        // TODO: Save the array of tasks
+        do {
+            let encoder = JSONEncoder()
+            let encodedTasks = try encoder.encode(tasks)
+            UserDefaults.standard.set(encodedTasks, forKey: tasksKey)
+        } catch {
+            print("Error encoding tasks: \(error)")
+        }
     }
 
     // Retrieve an array of saved tasks from UserDefaults.
     static func getTasks() -> [Task] {
-        
-        // TODO: Get the array of saved tasks from UserDefaults
-
-        return [] // 👈 replace with returned saved tasks
+        guard let tasksData = UserDefaults.standard.data(forKey: tasksKey) else {
+            return []
+        }
+        do {
+            let decoder = JSONDecoder()
+            let decodedTasks = try decoder.decode([Task].self, from: tasksData)
+            return decodedTasks
+        } catch {
+            print("Error decoding tasks: \(error)")
+            return []
+        }
     }
 
     // Add a new task or update an existing task with the current task.
     func save() {
-
-        // TODO: Save the current task
+        var savedTasks = Task.getTasks()
+        if let existingIndex = savedTasks.firstIndex(where: { $0.id == self.id }) {
+            // Update existing task
+            savedTasks[existingIndex] = self
+        } else {
+            // Add new task
+            savedTasks.append(self)
+        }
+        Task.save(savedTasks)
     }
 }
